@@ -19,11 +19,14 @@ package org.apache.commons.configuration2.convert;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
+import java.nio.file.FileSystems;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 
+import org.apache.commons.configuration2.PropertiesConfiguration;
 import org.easymock.EasyMock;
 import org.junit.Before;
 import org.junit.Test;
@@ -109,6 +112,19 @@ public class TestDisabledListDelimiterHandler {
         EasyMock.replay(trans);
         assertEquals("Wrong escaped string", STR_VALUE, handler.escape(testStr, trans));
         EasyMock.verify(trans);
+    }
+
+    @Test
+    public void testCompress840() {
+        final PropertiesConfiguration configuration = new PropertiesConfiguration();
+        final Path path = FileSystems.getDefault().getPath("bar");
+        handler.flatten(path, 0);
+        // Stack overflow:
+        handler.flatten(path, 1);
+        handler.flatten(path, Integer.MAX_VALUE);
+        handler.parse(path);
+        configuration.addProperty("foo", path);
+        configuration.toString();
     }
 
     /**

@@ -17,6 +17,7 @@
 package org.apache.commons.configuration2.convert;
 
 import java.lang.reflect.Array;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -114,7 +115,10 @@ public abstract class AbstractListDelimiterHandler implements ListDelimiterHandl
         }
 
         final Collection<Object> result = new LinkedList<>();
-        if (value instanceof Iterable) {
+        if (value instanceof Path) {
+            // Don't handle as an Iterable.
+            result.add(value);
+        } else if (value instanceof Iterable) {
             flattenIterator(result, ((Iterable<?>) value).iterator(), limit);
         } else if (value instanceof Iterator) {
             flattenIterator(result, (Iterator<?>) value, limit);
