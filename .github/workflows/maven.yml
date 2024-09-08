@@ -41,9 +41,9 @@ jobs:
     - name: Build with Maven
       run: mvn -V -Ddoclint=none --file pom.xml --no-transfer-progress
 
-    # Upload jar only on ubuuntu java 11
+    # Upload jar only on ubuntu java 8
     - name: "Upload jars"
-      if: ${{ matrix.java == 11 }}
+      if: ${{ matrix.java == 8 }}
       uses: actions/upload-artifact@v4
       with:
           name: "jars"
