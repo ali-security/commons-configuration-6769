@@ -18,6 +18,7 @@ package org.apache.commons.configuration2.convert;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
@@ -126,6 +127,59 @@ public class TestDisabledListDelimiterHandler {
         configuration.addProperty("foo", path);
         configuration.toString();
     }
+
+    private Collection<?> testCompress840util(final Iterable<?> object) {
+        final PropertiesConfiguration configuration = new PropertiesConfiguration();
+        handler.flatten(object, 0);
+        // Stack overflow:
+        handler.flatten(object, 1);
+        handler.flatten(object, Integer.MAX_VALUE);
+        handler.parse(object);
+        configuration.addProperty("foo", object);
+        configuration.toString();
+        return handler.flatten(object, Integer.MAX_VALUE);
+    }
+
+    @Test
+    public void testCompress840ArrayListCycle() {
+        for (int size : Arrays.asList(0,2,4,8,16)){
+            final ArrayList<Object> object = new ArrayList<>();
+            for (int i = 0; i < size; i++) {
+                object.add(i);
+                object.add(object);
+                object.add(new ArrayList<>(object));
+            }
+            final Collection<?> result = testCompress840util(object);
+            assertNotNull(result);
+            assertEquals(size, result.size());
+            object.add(object);
+            testCompress840util(object);
+        }
+    }
+
+    @Test
+    public void testCompress840Exception() {
+        for (int size : Arrays.asList(0,2,4,8,16)){
+            final ArrayList<Object> object = new ArrayList<>();
+            final Exception bottom = new Exception();
+            object.add(bottom);
+            Exception top = bottom;
+            for (int i = 0; i < size; i++) {
+                object.add(i);
+                top = new Exception(top);
+                object.add(top);
+            }
+            if (bottom != top) {
+                // direct self-causation is not allowed.
+                bottom.initCause(top);
+            }
+            final Collection<?> result = testCompress840util(object);
+            assertNotNull(result);
+            assertEquals(size * 2 + 1, result.size());
+            assertEquals(object, result);
+        }
+    }
+
 
     /**
      * Tests whether a limit is applied when extracting values from an array.

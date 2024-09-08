@@ -20,8 +20,11 @@ import java.lang.reflect.Array;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.Set;
 
 /**
  * <p>
@@ -110,18 +113,22 @@ public abstract class AbstractListDelimiterHandler implements ListDelimiterHandl
      * @return a &quot;flat&quot; collection containing all primitive values of the passed in object
      */
     Collection<?> flatten(final Object value, final int limit) {
+        return flatten(value, limit, Collections.newSetFromMap(new IdentityHashMap<>()));
+    }
+
+    private Collection<?> flatten(final Object value, final int limit, final Set<Object> dejaVu) {
+        dejaVu.add(value);
         if (value instanceof String) {
             return split((String) value, true);
         }
-
         final Collection<Object> result = new LinkedList<>();
         if (value instanceof Path) {
             // Don't handle as an Iterable.
             result.add(value);
         } else if (value instanceof Iterable) {
-            flattenIterator(result, ((Iterable<?>) value).iterator(), limit);
+            flattenIterator(result, ((Iterable<?>) value).iterator(), limit, dejaVu);
         } else if (value instanceof Iterator) {
-            flattenIterator(result, (Iterator<?>) value, limit);
+            flattenIterator(result, (Iterator<?>) value, limit, dejaVu);
         } else if (value != null) {
             if (value.getClass().isArray()) {
                 for (int len = Array.getLength(value), idx = 0, size = 0; idx < len && size < limit; idx++, size = result.size()) {
@@ -149,15 +156,19 @@ public abstract class AbstractListDelimiterHandler implements ListDelimiterHandl
     /**
      * Flattens the given iterator. For each element in the iteration {@code flatten()} is called recursively.
      *
-     * @param target the target collection
      * @param it the iterator to process
      * @param limit a limit for the number of elements to extract
+     * @param dejaVue Previously visited objects.
      */
-    private void flattenIterator(final Collection<Object> target, final Iterator<?> it, final int limit) {
+    private void flattenIterator(final Collection<Object> target, final Iterator<?> iterator, final int limit,
+            Set<Object> dejaVue) {
         int size = target.size();
-        while (size < limit && it.hasNext()) {
-            target.addAll(flatten(it.next(), limit - size));
-            size = target.size();
+        while (size < limit && iterator.hasNext()) {
+            final Object next = iterator.next();
+            if (!dejaVue.contains(next)) {
+                target.addAll(flatten(next, limit - size, dejaVue));
+                size = target.size();
+            }
         }
     }
 }
